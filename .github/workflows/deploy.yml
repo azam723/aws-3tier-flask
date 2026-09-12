@@ -11,12 +11,16 @@ permissions:
 
 env:
   AWS_REGION: ap-south-1
-  AWS_ACCOUNT_ID: "938379788528"
   AWS_ROLE_ARN: arn:aws:iam::938379788528:role/flask-3tier-github-actions
+  ECR_REPOSITORY: flask-3tier-flask
+  ECS_CLUSTER: flask-3tier-cluster
+  ECS_SERVICE: flask-3tier-flask-service
+  ECS_TASK_DEFINITION: /tmp/task-definition.json
+  CONTAINER_NAME: flask-api
 
 jobs:
   deploy:
-    name: Authenticate with AWS
+    name: Build and Deploy
     runs-on: ubuntu-latest
 
     steps:
@@ -30,6 +34,58 @@ jobs:
           role-session-name: GitHubActionsDeployment
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Verify AWS identity
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@62f4f872db3836360b72999f4b87f1ff13310f3a
+
+      - name: Get current ECS task definition
         run: |
-          aws sts get-caller-identity
+          aws ecs describe-task-definition \
+            --task-definition flask-3tier-flask \
+            --query taskDefinition \
+            --output json > /tmp/task-definition-full.json
+
+          jq 'del(
+            .taskDefinitionArn,
+            .revision,
+            .status,
+            .requiresAttributes,
+            .compatibilities,
+            .registeredAt,
+            .registeredBy
+          )' \
+          /tmp/task-definition-full.json \
+          > /tmp/task-definition.json
+
+      - name: Build, tag, and push image
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        working-directory: backend
+        run: |
+          IMAGE="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          docker build \
+            -t "$IMAGE" \
+            .
+
+          docker push "$IMAGE"
+
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Update task definition image
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@c804dfbdd57f713b6c079302a4c01db7017a36fc
+        with:
+          task-definition: ${{ env.ECS_TASK_DEFINITION }}
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy to Amazon ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@df9643053eda01f169e64a0e60233aacca83799a
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true

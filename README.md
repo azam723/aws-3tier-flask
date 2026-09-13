@@ -51,6 +51,9 @@ I built and connected:
 The final result is a containerized Flask API that communicates with PostgreSQL and S3 while running on ECS Fargate in private subnets.
 
 ---
+## Architecture Diagram
+<img width="1312" height="1199" alt="aws-3tier-architecture" src="https://github.com/user-attachments/assets/0a87a966-9c6e-426d-8e11-6af6752ed00a" />
+
 
 ## Architecture
 

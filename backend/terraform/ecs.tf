@@ -167,6 +167,12 @@ resource "aws_ecs_service" "flask" {
 
   enable_execute_command = true
 
+  lifecycle {
+    ignore_changes = [
+      task_definition
+    ]
+  }
+
   network_configuration {
     subnets = [
       aws_subnet.private_a.id,

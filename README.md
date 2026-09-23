@@ -13,18 +13,13 @@ A hands-on AWS project: a Flask REST API designed, provisioned, containerized, a
 
 ## Architecture
 
-<img width="1536" height="1024" alt="ChatGPT Image Sep 18, 2026, 11_44_30 PM" src="https://github.com/user-attachments/assets/4ddc521a-33ff-44a1-a302-0885424a2810" />
+<img width="500" height="500" alt="aws_3tier_network_structure" src="https://github.com/user-attachments/assets/5a7c1697-30b6-4025-b5ba-f0daa3a31bc8" />
 
-```text
-Internet → ALB (public) → ECS Fargate (private) → RDS PostgreSQL (private)
-                                                 → Amazon S3
-```
 
-ECS and RDS sit in private subnets with no public IPs; the ALB is the only public entry point, and outbound traffic from private subnets routes through a NAT Gateway.
 
 ## Why this project
 
-Most fresher cloud projects deploy a single service in isolation. This one connects the full stack a real application needs — networking, compute, database, object storage, secrets, and CI/CD — and does it with the same security posture a production system would need: private compute, no long-lived AWS credentials in CI, and secrets pulled from Secrets Manager rather than hardcoded.
+Most fresher cloud projects deploy a single service in isolation. This one connects the full stack a real application needs, networking, compute, database, object storage, secrets, and CI/CD and does it with the same security posture a production system would need: private compute, no long-lived AWS credentials in CI, and secrets pulled from Secrets Manager rather than hardcoded.
 
 ## What was built
 
@@ -50,12 +45,12 @@ DELETE /api/files/<name>  → delete from S3
 
 ## CI/CD pipeline
 
-```text
-git push → GitHub Actions → OIDC auth to AWS → Docker build → ECR push (tag: git-sha)
-    → ECS task definition updated → rolling deployment → ALB /health check
-```
+<img width="600" height="600" alt="aws_3tier_cicd_pipeline" src="https://github.com/user-attachments/assets/d422678e-6e01-41d5-a8ec-a441c792b99d" />
 
-Each image is tagged with the Git commit SHA (not `latest`), so any running deployment is traceable back to an exact commit. Authentication uses GitHub OIDC — the workflow assumes a scoped IAM role restricted to this repo and the `main` branch, so no AWS access keys are stored in GitHub at all.
+
+
+
+Each image is tagged with the Git commit SHA (not `latest`), so any running deployment is traceable back to an exact commit. Authentication uses GitHub OIDC, the workflow assumes a scoped IAM role restricted to this repo and the `main` branch, so no AWS access keys are stored in GitHub at all.
 
 ## Repository structure
 
